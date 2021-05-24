@@ -1,35 +1,27 @@
 extends layout
 block content 
-    h1= title
-
-    p #[strong Author:]
-      a(href=book.author.url) #{book.author.name}
+    h1 #{title}:  #{book.title}
     p #[strong Summary:] #{book.summary}
     p #[strong ISBN:] #{book.isbn}
-    p #[strong Genre:]
-      each val, index in book.genre
-         a(href=val.url) #{val.name}
-         if index < book.genre.length - 1
-         |,
-    div(style='margin-left:20px; marging-top:20px')
-      h4 Copies
+
+    if book_instance
+
+      p #[strong Delete the following instances before attempting to delete this book.]
+    
+      div(style='margin-left:20px; marging-top:20px')
+        h4 Copies
+        
+        for bookinstance in book_instance
+           p #[strong Book Status:] 
+             a(href=bookinstance.url) #{bookinstance.status}
+           p #[strong Book Imprint:] #{bookinstance.imprint} 
+           p #[strong Book Due_Back:] #{bookinstance.due_back}
       hr
-      p
-        a(href=book.url+'/delete') Delete Book
-      p
-        a(href=book.url+'/update') Update Book
-      each val in book_instances 
-        hr
-        if val.status=='Available'
-          p.text-success #{val.status}
-        else if val.status=='Maintenance'
-          p.text-danger #{val.status}
-        else 
-          p.text-warning  #{val.status}
-        p #[strong Imprint:] #{val.imprint}
-        if val.status!='Available'
-          p #[strong Due back:] #{val.due_back_formated}
-        p #[strong Id:]
-          a(href=val.url) #{val._id}
-      else 
-        p  There are no copies of this book in the library.
+    else 
+        p Do you really want to delete this Book?
+        form(method='POST' action='')
+            div.form-group
+              input#bookid.form-control(type='hidden',name='bookid', required='true', value=book._id )
+
+            button.btn.btn-primary(type='submit') Delete    
+        

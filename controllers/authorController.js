@@ -3,6 +3,7 @@ var Book = require('../models/book');
 
 var async = require('async');
 const { body,validationResult } = require('express-validator');
+const { findById } = require('../models/author');
 
 //Display list of all Authors.
 exports.author_list = function(req, res) {
@@ -114,7 +115,7 @@ exports.author_delete_post = function(req, res) {
     //Success
     if(results.authors_books.length > 0) {
         // Author has books. Render in same way as for GET route.
-        res.render('book_delete', {titlte: 'Delete Author', author: results.author, author_books: results.authors_books,});
+        res.render('author_delete', {titlte: 'Delete Author', author: results.author, author_books: results.authors_books,});
         return;
     }
     else {
@@ -133,10 +134,55 @@ exports.author_delete_post = function(req, res) {
 
 //Handle Author update on GET
 exports.author_update_get = function(req, res) {
-    res.send('NOT IMPLEMENTED : Author update GET');
+    async.parallel({
+        author: function(callback) {
+            Author.findById(req.params.id).exec(callback)
+        },
+        author_books: function(callback){
+            Book.find({'author': req.params.id})
+            .exec(callback)
+    },
+       
+    }, function(err, results) {
+        if(err) { return next(err); }
+        res.render('author_form', {title: 'Author Update', author: results.author, author_books: results.author_books});
+    })
 };
 
 //Handle Author update on POST
-exports.author_update_post = function(req, res) {
-    res.send('NOT IMPLEMENTED : Author update POST');
-};
+exports.author_update_post = [
+
+    body('first_name').trim().isLength({ min: 1 }).escape().withMessage('First name must be specified.')
+    .isAlphanumeric().withMessage('First name has non-alphanumeric characters.'),
+    body('family_name').trim().isLength({ min: 1}).escape().withMessage('Family name must be specified.')
+    .isAlphanumeric().withMessage('Family name has non-alphanumeric characters.'),
+    body('date_of_birth', 'Invalid date of birth').optional({ checkFalsy: true }).isISO8601().toDate(),
+    body('date_of_death', 'Invalid date of death').optional({ checkFalsy: true }).isISO8601().toDate(),
+
+    (req, res, next) => {
+        const errors = validationResult(req);
+
+        var author = new Author(
+            {
+                first_name: req.body.first_name,
+                family_name: req.body.family_name,
+                date_of_birth: req.body.date_of_birth,
+                date_of_death: req.body.date_of_death,
+                _id:req.params.id //This is required, or a new ID will be assigned!
+            }
+        );
+
+        if(!errors.isEmpty()) {  
+                res.render('author_form', {title: 'Author Update', author: author, errors: errors.array()});
+                return;
+        }
+         else {
+             Author.findByIdAndUpdate(req.params.id, author, {}, function(err, theauthor) {
+                if(err) { return next(err); }
+                // Successful - redirect to author detail page.
+                res.redirect(theauthor.url);
+             })
+         }
+    
+  }
+];

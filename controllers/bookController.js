@@ -16,8 +16,8 @@ exports.index = function(req, res) {
         book_instance_count: function(callback) {
             BookInstance.countDocuments({}, callback);
         },
-        book_instance_availlable_count: function(callback) {
-            BookInstance.countDocuments({status: 'Availlable'}, callback);
+        book_instance_available_count: function(callback) {
+            BookInstance.countDocuments({status: 'Available'}, callback);
         },
         author_count: function(callback) {
             Author.countDocuments({}, callback);
@@ -159,11 +159,14 @@ exports.book_create_post = [
 exports.book_delete_get = function(req, res, next) {
     async.parallel({
         book: function(callback) {
-            Book.findById(req.params.id).exec(callback)
+            Book.findById(req.params.id)
+            .populate('author')
+            .populate('genre')
+            .exec(callback)
         },
         book_instances: function(callback) {
             BookInstance.find({ 'book': req.params.id}).exec(callback)
-        }
+        },
 
     }, function(err, results) {
         if(err) { return next(err); }
@@ -171,30 +174,34 @@ exports.book_delete_get = function(req, res, next) {
             res.redirect('/catalog/books');
         }
         // Successful, so render.
-        res.render('book_delete', { title: 'Delete Author', book: results.book, book_instance: results.book_book_instances } );
+        res.render('book_delete', { title: "Delete Book", book: results.book, book_instance: results.book_instances } );
     })
 };
 
 //Handle Book delete on POST
-exports.book_delete_post = function(req, res) {
-   async({
+exports.book_delete_post = function(req, res, next) {
+   async.parallel({
     book: function(callback) {
-        Book.findById(req.body.bookbid).exec(callback)
+        Book.findById(req.body.bookid).exec(callback);
        },
-    book_instance: function(callback) {
+    books_instances: function(callback) {
         BookInstance.find({'book': req.body.bookid}).exec(callback)
        },
    }, function(err, results){
-       if(results.book_instances.length > 0){
-           res.render('book_delete', {title: 'Delete Author', book: results.book, book_instances: results.book_book_instances});
-           return;
-       }
+       if(err){return next(err); }
+
+       if(results.books_instances.length > 0){
+
+        res.render('book_delete', {title: 'Delete Book', book: results.book, book_instance: results.books_instances});
+        return;
+       }  
        else {
-           Book.findByIdAndRemove(req.body.bookid, function deleteBook(err) {
-               if(err) { return (err); }
-               res.redirect('/catalog/books')
-           })
+        Book.findByIdAndRemove(req.body.bookid, function deleteBook(err) {
+            if(err) { return (err); }
+            res.redirect('/catalog/books')
+        });
        }
+       
    })
 };
 
@@ -250,7 +257,7 @@ exports.book_update_post = [
     },
 
     // Validate and sanitise fields.
-    body('title', 'Title must not be empty.').trim().isLength({ min: 1 }).escape(),
+    
     body('author', 'Author must not be empty.').trim().isLength({ min: 1 }).escape(),
     body('summary', 'Summary must not be empty.').trim().isLength({ min: 1 }).escape(),
     body('isbn', 'ISBN must not be empty').trim().isLength({ min: 1 }).escape(),

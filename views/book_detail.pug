@@ -13,11 +13,7 @@ block content
          |,
     div(style='margin-left:20px; marging-top:20px')
       h4 Copies
-      hr
-      p
-        a(href=book.url+'/delete') Delete Book
-      p
-        a(href=book.url+'/update') Update Book
+      
       each val in book_instances 
         hr
         if val.status=='Available'
@@ -33,3 +29,8 @@ block content
           a(href=val.url) #{val._id}
       else 
         p  There are no copies of this book in the library.
+    hr
+    p
+      a(href=book.url+'/delete') Delete Book
+    p
+      a(href=book.url+'/update') Update Book
